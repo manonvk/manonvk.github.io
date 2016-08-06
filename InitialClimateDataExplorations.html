@@ -126,9 +126,7 @@ $(document).ready(function () {
 <li><a href="#goals">Goals</a></li>
 <li><a href="#resources">Resources</a></li>
 <li><a href="#prerequisites">0. Prerequisites</a></li>
-<li><a href="#get-the-data-in">1. Get the data in</a><ul>
-<li><a href="#loading-a-csv-file-of-precipitation-station-records">Loading a CSV file of Precipitation Station Records</a></li>
-</ul></li>
+<li><a href="#get-the-data-in">1. Get the data in</a></li>
 <li><a href="#temporal-distribution">2. Temporal Distribution</a><ul>
 <li><a href="#plot-a-period-of-record-graph">Plot a Period of Record Graph</a></li>
 </ul></li>
@@ -137,6 +135,7 @@ $(document).ready(function () {
 </ul></li>
 <li><a href="#statistical-variability">4. Statistical Variability</a><ul>
 <li><a href="#plot-time-series-graphs-of-each-of-your-climate-stations">Plot time-series graphs of each of your climate stations</a></li>
+<li><a href="#plot-single-time-series-for-each-climate-variable">Plot single time-series for each climate variable</a></li>
 <li><a href="#calculate-basic-statistical-indicators-for-each-time-series">Calculate basic statistical indicators for each time series</a></li>
 </ul></li>
 <li><a href="#subset-your-data">5. Subset your data</a></li>
@@ -154,7 +153,7 @@ $(document).ready(function () {
 <p>The Rmarkdown file and data used to generate this page is stored on <a href="https://github.com/manonvk/Climate-Data-Processing-for-WEAP-Applications/tree/master/R">github</a></p>
 <div id="goals" class="section level2">
 <h2>Goals</h2>
-<p>Go over some common workflows relevant to exploring, filtering, and correcting climate station data. The goals of these initial analyses of climatological time-series are to:</p>
+<p>Go over some common workflows relevant to exploring, filtering, and correcting climate station data. The goals of these initial analyses of climatological time-series are to familiarize yourself with your climate data; specifically, to:</p>
 <ul>
 <li>Understand the <strong>spatial distribution</strong> of your climate stations</li>
 <li>Understand the <strong>temporal distribution</strong> of the observed climate measurements</li>
@@ -170,16 +169,7 @@ $(document).ready(function () {
 </div>
 <div id="resources" class="section level2">
 <h2>Resources</h2>
-<ul>
-<li>Data used for the examples are hosted in this repository. The zipped file contains the following:
-<ul>
-<li><code>Table_All_Precip.csv</code> : csv of daily precipitation data (unfiltered) from climate stations in and surrounding the Chancay-Lambayeque watershed, Peru</li>
-<li><code>Table_All_Temp_Max.csv</code>: csv of daily maximum temperature data (unfiltered) from same stations</li>
-<li><code>Table_All_Temp_Min.csv</code>: csv of daily minimum temperature data (unfiltered) from same stations</li>
-<li><code>Coordinates.csv</code>: csv of lat-long coordinates of local climate stations</li>
-<li><code>Proyecto_CuencaCL.shp</code>: shapefile (including related files) of study site extent</li>
-</ul></li>
-</ul>
+<p>Data used for the examples are hosted in this repository. The zipped file contains the following: - <code>Table_All_Precip.csv</code> : csv of daily precipitation data (unfiltered) from climate stations in and surrounding the Chancay-Lambayeque watershed, Peru - <code>Table_All_Temp_Max.csv</code>: csv of daily maximum temperature data (unfiltered) from same stations - <code>Table_All_Temp_Min.csv</code>: csv of daily minimum temperature data (unfiltered) from same stations - <code>Coordinates.csv</code>: csv of lat-long coordinates of local climate stations - <code>Proyecto_CuencaCL.shp</code>: shapefile (including related files) of study site extent</p>
 <p>You can download/unzip the data by hand or run the following code to download and unzip the data to a temporary directory.</p>
 <pre class="r"><code>setwd( tempdir() )  # set working directory to temporary directory 
 download.file(&quot;https://github.com/manonvk/Climate-Data-Processing-for-WEAP-Applications/blob/master/Raw-Data/rawclimatedataR.zip&quot;, destfile = 'rawclimatedataR.zip')
@@ -187,40 +177,71 @@ unzip( 'rawclimatedataR.zip' , exdir = '.')</code></pre>
 </div>
 <div id="prerequisites" class="section level1">
 <h1>0. Prerequisites</h1>
-<p>Some date functions we will use come from the <code>zoo</code> package, so be sure to have it installed prior to attempting this exercise. You can download this package with…</p>
-<pre class="r"><code>install.packages('zoo', repos = &quot;http://cran.cnr.berkeley.edu/&quot;)</code></pre>
+<p>Some functions we will use come the following packages, so be sure to have them installed prior to attempting this exercise.</p>
+<p><em><code>ggmap</code>: mapping functions </em><code>ggplot2</code>: graphing functions <em><code>raster</code>: opening shapefiles </em><code>rgdal</code>: managing shapefiles and coordinates data *</p>
+<p>You can download these packages with…</p>
+<pre class="r"><code>install.packages('ggmap', repos = &quot;http://cran.cnr.berkeley.edu/&quot;)
+install.packages('ggplot2', repos = &quot;http://cran.cnr.berkeley.edu/&quot;)
+install.packages('raster', repos = &quot;http://cran.cnr.berkeley.edu/&quot;)
+install.packages('rgdal', repos = &quot;http://cran.cnr.berkeley.edu/&quot;)</code></pre>
 </div>
 <div id="get-the-data-in" class="section level1">
 <h1>1. Get the data in</h1>
-<p>Packages you’ll need:</p>
-<pre class="r"><code>library(zoo)</code></pre>
-<pre><code>## 
-## Attaching package: 'zoo'</code></pre>
-<pre><code>## The following objects are masked from 'package:base':
-## 
-##     as.Date, as.Date.numeric</code></pre>
-<div id="loading-a-csv-file-of-precipitation-station-records" class="section level2">
-<h2>Loading a CSV file of Precipitation Station Records</h2>
+<p>First, let’s get all the data you’ll need for this script loaded and saved.</p>
+<p><strong>Packages you’ll need:</strong></p>
+<pre class="r"><code>library(ggmap)</code></pre>
+<pre><code>## Warning: package 'ggmap' was built under R version 3.2.4</code></pre>
+<pre><code>## Loading required package: ggplot2</code></pre>
+<pre><code>## Warning: package 'ggplot2' was built under R version 3.2.4</code></pre>
+<pre class="r"><code>library(ggplot2)
+library(raster)</code></pre>
+<pre><code>## Warning: package 'raster' was built under R version 3.2.5</code></pre>
+<pre><code>## Loading required package: sp</code></pre>
+<pre class="r"><code>library(rgdal)</code></pre>
+<pre><code>## rgdal: version: 1.1-3, (SVN revision 594)
+##  Geospatial Data Abstraction Library extensions to R successfully loaded
+##  Loaded GDAL runtime: GDAL 2.0.1, released 2015/09/15
+##  Path to GDAL shared files: C:/Users/Manon/Documents/R/win-library/3.2/rgdal/gdal
+##  GDAL does not use iconv for recoding strings.
+##  Loaded PROJ.4 runtime: Rel. 4.9.1, 04 March 2015, [PJ_VERSION: 491]
+##  Path to PROJ.4 shared files: C:/Users/Manon/Documents/R/win-library/3.2/rgdal/proj
+##  Linking to sp version: 1.2-2</code></pre>
+<p><strong>Loading the CSV files for precipitation and temperature (min and max) station records, and the station coordinates:</strong></p>
+<pre class="r"><code>#Precip &lt;- read.csv('Table_All_Precip.csv', check.names = F, stringsAsFactors = F)
+#Temp_Min &lt;- read.csv('Table_All_Temp_Min.csv', check.names = F, stringsAsFactors = F)
+#Temp_Max &lt;- read.csv('Table_All_Temp_Max.csv', check.names = F, stringsAsFactors = F)
+#Coordinates &lt;- read.csv('Coordinates.csv', check.names = F, stringsAsFactors = F)</code></pre>
 <p>that was easy!</p>
-<p>as a side note, the ‘check.names = F’ parameter in the ‘read.csv’ function preserves the column headers from the original record table</p>
-</div>
+<p>As a side note, the ‘check.names = F’ parameter in the ‘read.csv’ function preserves the column headers from the original record table. Your input climate tables should look like this:</p>
+<pre class="r"><code>#head(Precip)</code></pre>
+<p>And the coordinate table should look like this, with spatial information saved in lat and long coordinates:</p>
+<pre class="r"><code>#head(Coordinates)</code></pre>
+<p><strong>Loading your shapefile:</strong></p>
+<pre class="r"><code>#project &lt;- readOGR( tempdir(),'Proyecto_CuencaCL') </code></pre>
+<p>Make sure your shapefile is saved with the WGS84 reference system. You will only use this shapefile when creating your Station Map.</p>
 </div>
 <div id="temporal-distribution" class="section level1">
 <h1>2. Temporal Distribution</h1>
+<p>Let’s first look at the <strong>temporal</strong> distribution of your data; that is, the period of record for each climate variable at each station. This will help us assess the amount of missing data we are dealing with, and designate an optimal period of record for your project.</p>
 <div id="plot-a-period-of-record-graph" class="section level2">
 <h2>Plot a Period of Record Graph</h2>
 </div>
 </div>
 <div id="spatial-distribution" class="section level1">
 <h1>3. Spatial Distribution</h1>
+<p>Now, let’s take a look at how the stations are <strong>spatially distributed</strong> within your study site, and explore which stations have precipitation and/or temperature data available within any designated period of record. This will help us assess the availability of data in a spatial sense, again informing what an optimal period of record may be, and helping to inform us about any holes in data that may affect future workflows and analyses.</p>
 <div id="create-a-station-map" class="section level2">
 <h2>Create a Station Map</h2>
 </div>
 </div>
 <div id="statistical-variability" class="section level1">
 <h1>4. Statistical Variability</h1>
+<p>The third lens through which to view your climate data is <strong>statistically</strong>; that is, looking at the climate measurements themselves. We will be plotting the time-series graphs for precipitation, minimum temperature, and maximum temperature at each of your stations individually, as well as on a single plot. We will also calculate basic statistical indicators for each time series: average, standard deviation, minimum, maximum, and percent of missing data. This portion of the script can be iterative: that is, you can come back to and re-run this script after correcting your data, and/or after filling in missing data, to better visualize and understand the data.</p>
 <div id="plot-time-series-graphs-of-each-of-your-climate-stations" class="section level2">
 <h2>Plot time-series graphs of each of your climate stations</h2>
+</div>
+<div id="plot-single-time-series-for-each-climate-variable" class="section level2">
+<h2>Plot single time-series for each climate variable</h2>
 </div>
 <div id="calculate-basic-statistical-indicators-for-each-time-series" class="section level2">
 <h2>Calculate basic statistical indicators for each time series</h2>
@@ -232,6 +253,7 @@ unzip( 'rawclimatedataR.zip' , exdir = '.')</code></pre>
 </div>
 <div id="subset-your-data" class="section level1">
 <h1>5. Subset your data</h1>
+<p>Armed with the knowledge and understanding you’ve gained about your data, let’s move on to subsetting your data to a designated period of record, and to the final stations you want to include in the next steps of your analysis.</p>
 </div>
 <div id="identifying-and-removing-errors-extremes" class="section level1">
 <h1>6. Identifying and removing errors &amp; extremes</h1>
